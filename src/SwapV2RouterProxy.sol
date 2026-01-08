@@ -35,7 +35,7 @@ interface IHederaTokenService {
     function associateToken(address account, address token) external returns (int64);
 }
 
-contract SwapRouterProxyHedera is Ownable, ReentrancyGuard {
+contract SwapV2RouterProxy is Ownable, ReentrancyGuard {
     address public immutable router;
     address public immutable WHBAR;
 
@@ -215,7 +215,6 @@ contract SwapRouterProxyHedera is Ownable, ReentrancyGuard {
         uint256 amountInMaximum
     ) internal returns (uint256 amountIn) {
         _checkDeadline(deadline);
-        if (msg.value > amountInMaximum) revert InsufficientMsgValue();
 
         ISwapRouter.ExactOutputParams memory p = ISwapRouter.ExactOutputParams({
             path: pathReversed,

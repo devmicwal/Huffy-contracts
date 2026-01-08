@@ -18,14 +18,17 @@ contract MockRelay {
 
     function executeBuybackAndBurn(
         address tokenIn,
-        bytes calldata path,
+        bytes calldata pathToQuote,
+        bytes calldata pathQuoteToHtk,
         uint256 amountIn,
         uint256 minQuoteOut,
         uint256 minAmountOut,
         uint256 maxPrice,
         uint256 deadline
     ) external returns (uint256) {
-        return treasury.executeBuybackAndBurn(tokenIn, path, amountIn, minQuoteOut, minAmountOut, maxPrice, deadline);
+        return treasury.executeBuybackAndBurn(
+            tokenIn, pathToQuote, pathQuoteToHtk, amountIn, minQuoteOut, minAmountOut, maxPrice, deadline
+        );
     }
 
     function executeSwap(

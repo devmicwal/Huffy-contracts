@@ -5,7 +5,6 @@ import {AccessControl} from "../lib/openzeppelin-contracts/contracts/access/Acce
 import {ReentrancyGuard} from "../lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {PairWhitelist} from "./PairWhitelist.sol";
 import {Treasury} from "./Treasury.sol";
-import {ISaucerswapRouter} from "./interfaces/ISaucerswapRouter.sol";
 import {ISwapAdapter} from "./interfaces/ISwapAdapter.sol";
 import {ParameterStore} from "./ParameterStore.sol";
 import {ITradeValidator} from "./interfaces/ITradeValidator.sol";
@@ -17,11 +16,11 @@ import {ITradeValidator} from "./interfaces/ITradeValidator.sol";
 contract Relay is AccessControl, ReentrancyGuard {
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
     bytes32 public constant TRADER_ROLE = keccak256("TRADER_ROLE");
+    bytes32 public constant TIMELOCK_ROLE = keccak256("TIMELOCK_ROLE");
 
     // Contracts
     PairWhitelist public immutable PAIR_WHITELIST;
     Treasury public immutable TREASURY;
-    ISaucerswapRouter public immutable SAUCERSWAP_ROUTER;
     ParameterStore public immutable PARAM_STORE;
     address public whbarToken;
 
@@ -101,28 +100,28 @@ contract Relay is AccessControl, ReentrancyGuard {
     constructor(
         address _pairWhitelist,
         address payable _treasury,
-        address _saucerswapRouter,
         address _parameterStore,
         address _admin,
+        address _timelock,
         address _whbarToken,
         address[] memory _initialTraders
     ) {
         require(_pairWhitelist != address(0), "Relay: Invalid whitelist");
         require(_treasury != address(0), "Relay: Invalid treasury");
-        require(_saucerswapRouter != address(0), "Relay: Invalid router");
         require(_parameterStore != address(0), "Relay: Invalid parameter store");
         require(_admin != address(0), "Relay: Invalid admin");
+        require(_timelock != address(0), "Relay: Invalid timelock");
         require(_whbarToken != address(0), "Relay: Invalid WHBAR token");
         require(_initialTraders.length > 0, "Relay: No initial traders");
 
         PAIR_WHITELIST = PairWhitelist(_pairWhitelist);
         TREASURY = Treasury(_treasury);
-        SAUCERSWAP_ROUTER = ISaucerswapRouter(_saucerswapRouter);
         PARAM_STORE = ParameterStore(_parameterStore);
         whbarToken = _whbarToken;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(DAO_ROLE, _admin);
+        _grantRole(TIMELOCK_ROLE, _timelock);
 
         for (uint256 i = 0; i < _initialTraders.length; i++) {
             require(_initialTraders[i] != address(0), "Relay: Invalid trader");
@@ -224,12 +223,13 @@ contract Relay is AccessControl, ReentrancyGuard {
     function proposeBuybackAndBurn(
         address tokenIn,
         bytes calldata pathToQuote,
+        bytes calldata pathQuoteToHtk,
         uint256 amountIn,
         uint256 minQuoteOut,
         uint256 minAmountOut,
         uint256 maxHtkPriceD18,
         uint256 deadline
-    ) external onlyRole(DAO_ROLE) nonReentrant returns (uint256 burnedAmount, bytes32[] memory reasonCodes) {
+    ) external onlyRole(TIMELOCK_ROLE) nonReentrant returns (uint256 burnedAmount, bytes32[] memory reasonCodes) {
         address htkToken = TREASURY.HTK_TOKEN();
         emit TradeProposed(
             msg.sender, TradeType.BUYBACK_AND_BURN, tokenIn, htkToken, amountIn, minAmountOut, block.timestamp
@@ -237,6 +237,8 @@ contract Relay is AccessControl, ReentrancyGuard {
         if (tokenIn != TREASURY.QUOTE_TOKEN()) {
             require(pathToQuote.length > 0, "Relay: Invalid path to quote");
         }
+        require(pathQuoteToHtk.length > 0, "Relay: Invalid path quote to HTK");
+
         ValidationResult memory vr = _validateTrade(tokenIn, htkToken, amountIn, minAmountOut, minAmountOut);
         if (!vr.isValid) {
             emit TradeValidationFailed(
@@ -267,7 +269,7 @@ contract Relay is AccessControl, ReentrancyGuard {
         );
         lastTradeTimestamp = block.timestamp;
         burnedAmount = TREASURY.executeBuybackAndBurn(
-            tokenIn, pathToQuote, amountIn, minQuoteOut, minAmountOut, maxHtkPriceD18, deadline
+            tokenIn, pathToQuote, pathQuoteToHtk, amountIn, minQuoteOut, minAmountOut, maxHtkPriceD18, deadline
         );
         emit TradeForwarded(
             msg.sender, TradeType.BUYBACK_AND_BURN, tokenIn, htkToken, amountIn, burnedAmount, block.timestamp

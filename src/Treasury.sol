@@ -114,6 +114,7 @@ contract Treasury is AccessControl, ReentrancyGuard {
     function executeBuybackAndBurn(
         address tokenToSell,
         bytes calldata pathToQuote,
+        bytes calldata pathQuoteToHtk,
         uint256 amountIn,
         uint256 minQuoteOut,
         uint256 minHtkOut,
@@ -126,26 +127,25 @@ contract Treasury is AccessControl, ReentrancyGuard {
         require(amountIn > 0, "Treasury: Zero amount");
         require(minHtkOut > 0, "Treasury: Zero minOut");
         require(deadline >= block.timestamp, "Treasury: Expired deadline");
+
+        // Validate pathQuoteToHtk
+        require(pathQuoteToHtk.length > 0, "Treasury: Invalid quote to HTK path");
+        (address quoteStart, address quoteEnd) = _extractPathEndpoints(pathQuoteToHtk);
+        require(quoteStart == quote, "Treasury: quote path start mismatch");
+        require(quoteEnd == HTK_TOKEN, "Treasury: quote path end mismatch");
+
         if (isHbar) {
             require(address(this).balance >= amountIn, "Treasury: Insufficient balance");
         } else {
             require(IERC20(tokenToSell).balanceOf(address(this)) >= amountIn, "Treasury: Insufficient balance");
         }
-
-        // Build quote->HTK path
-        bytes memory quoteToHtkPath = _encodeFeePath(quote, HTK_TOKEN, quoteToHtkFee);
-        (address quoteStart, address quoteEnd) = _extractPathEndpoints(quoteToHtkPath);
-        require(quoteStart == quote, "Treasury: quote path start mismatch");
-        require(quoteEnd == HTK_TOKEN, "Treasury: quote path end mismatch");
-
         uint256 quoteAmount;
         if (isHbar) {
             require(pathToQuote.length > 0, "Treasury: Path required");
-            (address startHbar, address endHbar) = _extractPathEndpoints(pathToQuote);
-            require(startHbar == whbarToken, "Treasury: Path must start with WHBAR");
-            require(endHbar == quote, "Treasury: Path must end in quote");
-
-            ISwapAdapter.SwapRequest memory hbarToQuote = ISwapAdapter.SwapRequest({
+            (address startNative, address endNative) = _extractPathEndpoints(pathToQuote);
+            require(startNative == whbarToken, "Treasury: Path must start with WHBAR");
+            require(endNative == quote, "Treasury: Path must end in quote");
+            ISwapAdapter.SwapRequest memory nativeToQuote = ISwapAdapter.SwapRequest({
                 kind: ISwapAdapter.SwapKind.ExactHBARForTokens,
                 tokenIn: address(0),
                 path: pathToQuote,
@@ -156,21 +156,18 @@ contract Treasury is AccessControl, ReentrancyGuard {
                 amountInMaximum: amountIn,
                 amountOutMinimum: minQuoteOut
             });
-
-            (, quoteAmount) = adapter.swap{value: amountIn}(hbarToQuote);
+            (, quoteAmount) = adapter.swap{value: amountIn}(nativeToQuote);
             require(quoteAmount >= minQuoteOut, "Treasury: Insufficient quote out");
         } else if (tokenToSell == quote) {
-            // direct quote -> HTK, optional pathToQuote ignored
+            // direct quote -> HTK, pathToQuote ignored
             quoteAmount = amountIn;
         } else {
             require(pathToQuote.length > 0, "Treasury: Path required");
             (address start, address end) = _extractPathEndpoints(pathToQuote);
             require(start == tokenToSell, "Treasury: Path start mismatch");
             require(end == quote, "Treasury: Path must end in quote");
-
             IERC20(tokenToSell).forceApprove(address(adapter), 0);
             IERC20(tokenToSell).forceApprove(address(adapter), amountIn);
-
             ISwapAdapter.SwapRequest memory toQuote = ISwapAdapter.SwapRequest({
                 kind: ISwapAdapter.SwapKind.ExactTokensForTokens,
                 tokenIn: tokenToSell,
@@ -182,11 +179,9 @@ contract Treasury is AccessControl, ReentrancyGuard {
                 amountInMaximum: amountIn,
                 amountOutMinimum: minQuoteOut
             });
-
             (, quoteAmount) = adapter.swap(toQuote);
             require(quoteAmount >= minQuoteOut, "Treasury: Insufficient quote out");
         }
-
         // Price guard (skip if maxHtkPriceD18 == type(uint256).max)
         if (maxHtkPriceD18 != type(uint256).max) {
             uint8 quoteDec = IERC20Metadata(quote).decimals();
@@ -198,15 +193,13 @@ contract Treasury is AccessControl, ReentrancyGuard {
             uint256 priceD18 = (quote18 * 1e18) / htkMin18;
             require(priceD18 <= maxHtkPriceD18, "Treasury: HTK price too high");
         }
-
-        // Swap quote -> HTK
+        // Swap quote -> HTK using provided path (supports both V1 and V2)
         IERC20(quote).forceApprove(address(adapter), 0);
         IERC20(quote).forceApprove(address(adapter), quoteAmount);
-
         ISwapAdapter.SwapRequest memory toHtk = ISwapAdapter.SwapRequest({
             kind: ISwapAdapter.SwapKind.ExactTokensForTokens,
             tokenIn: quote,
-            path: quoteToHtkPath,
+            path: pathQuoteToHtk,
             recipient: address(this),
             deadline: deadline,
             amountIn: quoteAmount,
@@ -214,12 +207,9 @@ contract Treasury is AccessControl, ReentrancyGuard {
             amountInMaximum: quoteAmount,
             amountOutMinimum: minHtkOut
         });
-
         (, uint256 htkReceived) = adapter.swap(toHtk);
         require(htkReceived >= minHtkOut, "Treasury: Insufficient output");
-
         emit BuybackExecuted(tokenToSell, amountIn, htkReceived, msg.sender, block.timestamp);
-
         burnedAmount = _burn(htkReceived);
         return burnedAmount;
     }

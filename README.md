@@ -123,7 +123,7 @@ forge script script/USDCmock.s.sol:USDCMock \
 ```
 source .env
 ```
-`HTK_TOKEN_ADDRESS, USDC_TOKEN_ADDRESS, PRIVATE_KEY`
+`HTK_TOKEN_ADDRESS, QUOTE_TOKEN_ADDRESS, PRIVATE_KEY`
 ```bash
 forge script script/SaucerswapMock.s.sol:SaucerswapMock \
   --rpc-url $HEDERA_RPC_URL \
@@ -137,7 +137,7 @@ source .env
 ```
 `SAUCERSWAP_ROUTER, WHBAR_TOKEN_ADDRESS`
 ```bash
-forge script script/SwapRouterProxyHedera.s.sol:DeploySwapRouterProxyHedera \
+forge script script/SwapRouterProxyV2.s.sol:DeploySwapRouterProxyHedera \
   --rpc-url $HEDERA_RPC_URL \
   --private-key $PRIVATE_KEY \
   --broadcast

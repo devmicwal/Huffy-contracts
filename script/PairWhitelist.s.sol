@@ -7,15 +7,9 @@ import {PairWhitelist} from "../src/PairWhitelist.sol";
 
 contract DeployPairWhitelist is Script {
     function run() external {
-        address daoAdmin = vm.envOr("DAO_ADMIN_ADDRESS", msg.sender);
-
-        console.log("Deployer:", msg.sender);
-        console.log("DAO Admin:", daoAdmin);
-
+        address timelock = vm.envAddress("TIMELOCK_ADDRESS");
         vm.startBroadcast();
-
-        PairWhitelist pairWhitelist = new PairWhitelist(daoAdmin);
-
+        PairWhitelist pairWhitelist = new PairWhitelist(timelock);
         vm.stopBroadcast();
 
         console.log("PairWhitelist deployed at:", address(pairWhitelist));

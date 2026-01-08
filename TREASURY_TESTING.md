@@ -91,17 +91,17 @@ We'll use `cast` to submit transactions with the deployer's private key. You can
 
 1) Approve the Treasury to pull tokens from your wallet:
 ```
-cast send $USDC_TOKEN_ADDRESS "approve(address,uint256)" $TREASURY_ADDRESS 100000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $QUOTE_TOKEN_ADDRESS "approve(address,uint256)" $TREASURY_ADDRESS 100000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 2) Call deposit on Treasury:
 ```
-cast send $TREASURY_ADDRESS "deposit(address,uint256)" $USDC_TOKEN_ADDRESS 100000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $TREASURY_ADDRESS "deposit(address,uint256)" $QUOTE_TOKEN_ADDRESS 100000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 Notes:
 - For USDC with 6 decimals, `100000000` = 100 USDC.
 - Check balance held by Treasury:
 ```
-cast call $TREASURY_ADDRESS "getBalance(address)(uint256)" $USDC_TOKEN_ADDRESS --rpc-url $RPC_URL
+cast call $TREASURY_ADDRESS "getBalance(address)(uint256)" $QUOTE_TOKEN_ADDRESS --rpc-url $RPC_URL
 ```
 
 ### B) Withdraw tokens from Treasury (DAO only)
@@ -109,13 +109,13 @@ cast call $TREASURY_ADDRESS "getBalance(address)(uint256)" $USDC_TOKEN_ADDRESS -
 Only an account with `DAO_ROLE` can call `withdraw`.
 ```
 # From DAO admin account (use its private key)
-cast send $TREASURY_ADDRESS "withdraw(address,address,uint256)" $USDC_TOKEN_ADDRESS 0xRecipient 50000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $TREASURY_ADDRESS "withdraw(address,address,uint256)" $QUOTE_TOKEN_ADDRESS 0xRecipient 50000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 This withdraws 50 USDC (6 decimals) to `0xRecipient`.
 
 If you deployed mocks and are using the MockDAO as admin, call via the MockDAO contract from the owner account:
 ```
-cast send $DAO_ADMIN_ADDRESS "withdrawFromTreasury(address,address,uint256)" $USDC_TOKEN_ADDRESS 0xRecipient 50000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $DAO_ADMIN_ADDRESS "withdrawFromTreasury(address,address,uint256)" $QUOTE_TOKEN_ADDRESS 0xRecipient 50000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 
 ### C) Buyback-and-Burn HTK via Saucerswap (Relay only)
@@ -125,11 +125,11 @@ Only an account with `RELAY_ROLE` can call `executeBuybackAndBurn`. You may invo
 Direct call (caller must have `RELAY_ROLE`):
 ```
 # Swap 100 USDC for HTK and burn the HTK received (provide an encoded swap path)
-cast send $TREASURY_ADDRESS "executeBuybackAndBurn(address,bytes,uint256,uint256,uint256)" $USDC_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 $DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $TREASURY_ADDRESS "executeBuybackAndBurn(address,bytes,uint256,uint256,uint256)" $QUOTE_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 $DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 Via MockRelay (recommended during testing):
 ```
-cast send $RELAY "executeBuybackAndBurn(address,bytes,uint256,uint256,uint256)" $USDC_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $RELAY "executeBuybackAndBurn(address,bytes,uint256,uint256,uint256)" $QUOTE_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 Notes:
 - Ensure the Treasury holds enough `tokenIn` (e.g., USDC) before calling.
@@ -144,11 +144,11 @@ Use `executeSwap(tokenIn, tokenOut, path, amountIn, amountOutMin, deadline)` to 
 Direct call on Treasury (requires `RELAY_ROLE`):
 ```
 # Example: swap USDC -> HTK
-cast send $TREASURY_ADDRESS "executeSwap(address,address,bytes,uint256,uint256,uint256)" $USDC_TOKEN_ADDRESS $HTK_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 $DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $TREASURY_ADDRESS "executeSwap(address,address,bytes,uint256,uint256,uint256)" $QUOTE_TOKEN_ADDRESS $HTK_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 $DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 Via MockRelay:
 ```
-cast send $RELAY_ADDRESS "executeSwap(address,address,bytes,uint256,uint256,uint256)" $USDC_TOKEN_ADDRESS $HTK_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 $DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
+cast send $RELAY_ADDRESS "executeSwap(address,address,bytes,uint256,uint256,uint256)" $QUOTE_TOKEN_ADDRESS $HTK_TOKEN_ADDRESS $USDC_TO_HTK_PATH 100000000 0 $DEADLINE --rpc-url $RPC_URL --private-key $PRIVATE_KEY
 ```
 Check the Treasury's balances after the swap:
 ```

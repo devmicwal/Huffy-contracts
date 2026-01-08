@@ -7,7 +7,7 @@ import {ParameterStore} from "../src/ParameterStore.sol";
 
 contract ParameterStoreDeploy is Script {
     function run() external returns (ParameterStore store) {
-        address timelock = vm.envAddress("TIMELOCK");
+        address timelock = vm.envAddress("TIMELOCK_ADDRESS");
         uint256 maxTradeBps = vm.envOr("MAX_TRADE_BPS", uint256(1));
         uint256 maxSlippageBps = vm.envOr("MAX_SLIPPAGE_BPS", uint256(2));
         uint256 tradeCooldownSec = vm.envOr("TRADE_COOLDOWN_SEC", uint256(3));

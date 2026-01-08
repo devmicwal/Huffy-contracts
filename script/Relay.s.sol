@@ -9,9 +9,9 @@ contract DeployRelay is Script {
     function run() external {
         address pairWhitelist = vm.envAddress("PAIR_WHITELIST_ADDRESS");
         address payable treasury = payable(vm.envAddress("TREASURY_ADDRESS"));
-        address saucerswapRouter = vm.envAddress("SAUCERSWAP_ROUTER");
         address whbarToken = vm.envAddress("WHBAR_TOKEN_ADDRESS");
         address daoAdmin = vm.envOr("DAO_ADMIN_ADDRESS", msg.sender);
+        address timelock = vm.envAddress("TIMELOCK_ADDRESS");
 
         // Parse initial traders (comma-separated addresses)
         address[] memory initialTraders;
@@ -27,27 +27,20 @@ contract DeployRelay is Script {
 
         address parameterStoreAddr = vm.envAddress("PARAMETER_STORE_ADDRESS");
 
-        console.log("Deployer:", msg.sender);
-        console.log("PairWhitelist:", pairWhitelist);
-        console.log("Treasury:", treasury);
-        console.log("Saucerswap Router:", saucerswapRouter);
-        console.log("DAO Admin:", daoAdmin);
-        console.log("WHBAR Token:", whbarToken);
-        console.log("Initial Traders Count:", initialTraders.length);
         for (uint256 i = 0; i < initialTraders.length; i++) {
             console.log("  Trader", i, ":", initialTraders[i]);
         }
 
         require(pairWhitelist != address(0), "PAIR_WHITELIST_ADDRESS not set");
         require(treasury != address(0), "TREASURY_ADDRESS not set");
-        require(saucerswapRouter != address(0), "SAUCERSWAP_ROUTER not set");
         require(parameterStoreAddr != address(0), "PARAMETER_STORE_ADDRESS not set");
+        require(timelock != address(0), "TIMELOCK_ADDRESS not set");
         require(whbarToken != address(0), "WHBAR_TOKEN_ADDRESS not set");
 
         vm.startBroadcast();
 
         Relay relay = new Relay(
-            pairWhitelist, treasury, saucerswapRouter, parameterStoreAddr, daoAdmin, whbarToken, initialTraders
+            pairWhitelist, treasury, parameterStoreAddr, daoAdmin, timelock, whbarToken, initialTraders
         );
 
         vm.stopBroadcast();

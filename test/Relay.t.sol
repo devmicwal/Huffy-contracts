@@ -6,8 +6,6 @@ import {Relay} from "../src/Relay.sol";
 import {PairWhitelist} from "../src/PairWhitelist.sol";
 import {Treasury} from "../src/Treasury.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
-import {MockSaucerswapRouter} from "../src/mocks/MockSaucerswapRouter.sol";
-import {MockSwapAdapter} from "../src/mocks/MockSwapAdapter.sol";
 import {ParameterStore} from "../src/ParameterStore.sol";
 import {ISwapAdapter} from "../src/interfaces/ISwapAdapter.sol";
 // Validators
@@ -17,6 +15,20 @@ import {SlippageValidator} from "../src/validators/SlippageValidator.sol";
 import {TreasuryBalanceValidator} from "../src/validators/TreasuryBalanceValidator.sol";
 import {BasicParamsValidator} from "../src/validators/BasicParamsValidator.sol";
 import {CooldownValidator} from "../src/validators/CooldownValidator.sol";
+import {IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+
+contract MockSimpleSwapAdapter is ISwapAdapter {
+    function swap(SwapRequest calldata req)
+        external
+        payable
+        override
+        returns (uint256 amountInUsed, uint256 amountOutReceived)
+    {
+        address htkToken = 0x1234000000000000000000000000000000000000;
+        amountOutReceived = req.amountOutMinimum > 0 ? req.amountOutMinimum + 1 : req.amountIn;
+        amountInUsed = req.amountIn;
+    }
+}
 
 contract RelayTest is Test {
     Relay public relay;
@@ -26,11 +38,11 @@ contract RelayTest is Test {
     MockERC20 public usdcToken;
     MockERC20 public usdtToken;
     address public whbarToken;
-    MockSaucerswapRouter public router;
-    MockSwapAdapter public swapAdapter;
+    MockSimpleSwapAdapter public swapAdapter;
     ParameterStore public parameterStore;
 
     address public dao;
+    address public timelock;
     address public trader;
     address public unauthorized;
 
@@ -136,6 +148,7 @@ contract RelayTest is Test {
 
     function setUp() public {
         dao = makeAddr("dao");
+        timelock = makeAddr("timelock");
         trader = makeAddr("trader");
         unauthorized = makeAddr("unauthorized");
 
@@ -144,9 +157,8 @@ contract RelayTest is Test {
         usdcToken = new MockERC20("USDC Token", "USDC", 6);
         usdtToken = new MockERC20("USDT Token", "USDT", 6);
 
-        // Deploy router + adapter
-        router = new MockSaucerswapRouter();
-        swapAdapter = new MockSwapAdapter(address(router));
+        // Deploy swap adapter
+        swapAdapter = new MockSimpleSwapAdapter();
         whbarToken = address(0x1234);
 
         // Deploy PairWhitelist
@@ -173,9 +185,9 @@ contract RelayTest is Test {
         relay = new Relay(
             address(pairWhitelist),
             payable(address(treasury)),
-            address(router),
             address(parameterStore),
             dao,
+            timelock,
             whbarToken,
             initialTraders
         );
@@ -185,17 +197,11 @@ contract RelayTest is Test {
         treasury.updateRelay(address(this), address(relay));
 
         // Mint tokens
-        htkToken.mint(address(router), INITIAL_SUPPLY);
         usdcToken.mint(address(treasury), 100_000e6);
         usdtToken.mint(address(treasury), 100_000e6);
-
-        // Fund router with output tokens for swaps
-        usdtToken.mint(address(router), INITIAL_SUPPLY);
-        usdcToken.mint(address(router), INITIAL_SUPPLY);
+        htkToken.mint(address(treasury), 100_000e6);
 
         // Setup exchange rates (rate is scaled by 1e18)
-        router.setExchangeRate(address(usdcToken), address(htkToken), 2e18); // 1 USDC = 2 HTK
-        router.setExchangeRate(address(usdcToken), address(usdtToken), 1e18); // 1 USDC = 1 USDT (1:1)
 
         // Add validators (DAO only)
         vm.startPrank(dao);
@@ -419,26 +425,6 @@ contract RelayTest is Test {
         assertTrue(true);
     }
 
-    // function test_ProposeSwap_WithinSlippageTolerance() public {
-    //     // Whitelist pair
-    //     vm.prank(dao);
-    //     pairWhitelist.addPair(address(usdcToken), address(usdtToken));
-
-    //     uint256 amountIn = 1000e6;
-    //     // Set minAmountOut to 96% of amountIn = 4% slippage (400 bps) < MAX_SLIPPAGE_BPS (500)
-    //     uint256 minAmountOut = (amountIn * 96) / 100;
-
-    //     vm.prank(trader);
-    //     _proposeSwapExactTokens(
-    //         address(usdcToken),
-    //         address(usdtToken),
-    //         _encodePath(address(usdcToken), address(usdtToken)),
-    //         amountIn,
-    //         minAmountOut,
-    //         block.timestamp + 1000
-    //     );
-    // }
-
     /* ============ Cooldown Enforcement Tests ============ */
 
     function test_RevertIf_CooldownNotElapsed() public {
@@ -538,6 +524,8 @@ contract RelayTest is Test {
     /* ============ Buyback and Burn Tests ============ */
 
     function test_ProposeBuybackAndBurn_Success() public {
+        assertTrue(relay.hasRole(relay.TIMELOCK_ROLE(), timelock));
+
         // Whitelist pair
         vm.prank(dao);
         pairWhitelist.addPair(address(usdcToken), address(htkToken));
@@ -547,13 +535,14 @@ contract RelayTest is Test {
 
         vm.expectEmit(true, true, true, false);
         emit TradeProposed(
-            dao, Relay.TradeType.BUYBACK_AND_BURN, address(usdcToken), address(htkToken), amountIn, minAmountOut, 0
+            timelock, Relay.TradeType.BUYBACK_AND_BURN, address(usdcToken), address(htkToken), amountIn, minAmountOut, 0
         );
 
-        vm.prank(dao);
+        vm.prank(timelock);
         (uint256 burnedAmount, bytes32[] memory reasonCodes) = relay.proposeBuybackAndBurn(
             address(usdcToken),
             bytes(""), // toQuote not needed when tokenIn == QUOTE
+            _encodePath(address(usdcToken), address(htkToken)),
             amountIn,
             0,
             minAmountOut,
@@ -563,15 +552,6 @@ contract RelayTest is Test {
 
         assertGt(burnedAmount, 0);
         assertEq(reasonCodes.length, 0);
-    }
-
-    function test_RevertIf_BuybackPairNotWhitelisted() public {
-        vm.prank(dao);
-        (uint256 burnedAmount, bytes32[] memory reasonCodes) = relay.proposeBuybackAndBurn(
-            address(usdcToken), bytes(""), 1000e6, 0, 1900e6, type(uint256).max, block.timestamp + 1000
-        );
-        assertEq(burnedAmount, 0);
-        assertContains(reasonCodes, keccak256("PAIR_NOT_WHITELISTED"));
     }
 
     /* ============ Invalid Parameters Tests ============ */

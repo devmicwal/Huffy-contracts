@@ -9,11 +9,11 @@ import {MockERC20} from "../src/mocks/MockERC20.sol";
 contract SaucerswapMock is Script {
     function run() external {
         address htkToken = vm.envAddress("HTK_TOKEN_ADDRESS");
-        address usdcToken = vm.envAddress("USDC_TOKEN_ADDRESS");
+        address usdcToken = vm.envAddress("QUOTE_TOKEN_ADDRESS");
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
 
         require(htkToken != address(0), "HTK_TOKEN_ADDRESS not set");
-        require(usdcToken != address(0), "USDC_TOKEN_ADDRESS not set");
+        require(usdcToken != address(0), "QUOTE_TOKEN_ADDRESS not set");
         require(deployerKey != 0, "PRIVATE_KEY not set");
 
         vm.startBroadcast(deployerKey);

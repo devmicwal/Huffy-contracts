@@ -13,50 +13,7 @@ import {Test} from "forge-std/Test.sol";
 import {TreasuryBalanceValidator} from "../src/validators/TreasuryBalanceValidator.sol";
 import {ISwapAdapter} from "../src/interfaces/ISwapAdapter.sol";
 
-interface IMockRouter {
-    function setRate(uint256 r) external;
-}
 
-contract MockRouter {
-    uint256 public rate = 100; // expectedOut = amountIn * rate
-
-    function setRate(uint256 r) external {
-        rate = r;
-    }
-
-    function getAmountsOut(
-        uint256 amountIn,
-        address[] calldata /*path*/
-    )
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256[] memory amounts = new uint256[](2);
-        amounts[0] = amountIn;
-        amounts[1] = amountIn * rate;
-        return amounts;
-    }
-
-    function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address,
-        /*to*/
-        uint256 /*deadline*/
-    )
-        external
-        pure
-        returns (uint256[] memory)
-    {
-        // not used in these tests. Return pass-through values
-        uint256[] memory amounts = new uint256[](path.length);
-        amounts[0] = amountIn;
-        amounts[1] = amountOutMin;
-        return amounts;
-    }
-}
 
 contract MockPairWhitelist {
     mapping(address => mapping(address => bool)) public pair;
@@ -117,12 +74,12 @@ contract TestRelay is Relay {
     constructor(
         address _pairWhitelist,
         address payable _treasury,
-        address _router,
         address _paramStore,
         address _admin,
+        address _timelock,
         address _whbarToken,
         address[] memory _initialTraders
-    ) Relay(_pairWhitelist, _treasury, _router, _paramStore, _admin, _whbarToken, _initialTraders) {}
+    ) Relay(_pairWhitelist, _treasury, _paramStore, _admin, _timelock, _whbarToken, _initialTraders) {}
 
     function exposeValidate(
         address tokenIn,
@@ -143,10 +100,10 @@ contract RelayValidateTest is Test {
     TestRelay relay;
     MockPairWhitelist pw;
     MockTreasury treasury;
-    MockRouter router;
     MockParameterStore params;
 
     address admin = address(this);
+    address timelock = address(this);
     address trader = address(this);
 
     address tokenIn = address(0x1000);
@@ -156,7 +113,6 @@ contract RelayValidateTest is Test {
     function setUp() public {
         pw = new MockPairWhitelist();
         treasury = new MockTreasury();
-        router = new MockRouter();
         params = new MockParameterStore();
         path = abi.encodePacked(tokenIn, uint24(0), tokenOut);
 
@@ -164,7 +120,7 @@ contract RelayValidateTest is Test {
         traders[0] = trader;
         address whbar = address(0x3000);
         relay = new TestRelay(
-            address(pw), payable(address(treasury)), address(router), address(params), admin, whbar, traders
+            address(pw), payable(address(treasury)), address(params), admin, timelock, whbar, traders
         );
 
         // Add validators
@@ -178,12 +134,11 @@ contract RelayValidateTest is Test {
         pw.setPair(tokenIn, tokenOut, true);
         treasury.setBalance(tokenIn, 1_000_000);
         params.set(1000, 100, 0); // 10% max trade, 1% slippage, no cooldown
-        router.setRate(100); // expectedOut = amountIn * 100
     }
 
     function test_validate_success() public view {
         uint256 amountIn = 10_000; // treasury balance 1,000,000 -> maxAllowed = 100,000
-        uint256 expectedOut = amountIn * router.rate();
+        uint256 expectedOut = amountIn * 100;
         uint256 minOut = expectedOut - (expectedOut * 50 / 10_000); // 50 bps slippage
         Relay.ValidationResult memory vr = relay.exposeValidate(tokenIn, tokenOut, amountIn, minOut, expectedOut);
         assertTrue(vr.isValid, "should be valid");
@@ -208,9 +163,8 @@ contract RelayValidateTest is Test {
 
     function test_exceeds_max_slippage() public {
         params.set(1000, 100, 0); // 1% max
-        router.setRate(100); // expectedOut = amountIn * 100
         uint256 amountIn = 100;
-        uint256 expectedOut = amountIn * router.rate();
+        uint256 expectedOut = amountIn * 100;
         uint256 minOut = expectedOut - (expectedOut * 200 / 10_000); // 200 bps -> 2%
         Relay.ValidationResult memory vr = relay.exposeValidate(tokenIn, tokenOut, amountIn, minOut, expectedOut);
         assertFalse(vr.isValid);

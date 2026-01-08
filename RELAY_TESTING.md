@@ -102,7 +102,7 @@ Whitelist trading pairs that the DAO approves:
 # From DAO admin account
 # Example: Allow USDC -> HTK trades
 cast send $PAIR_WHITELIST_ADDRESS "addPair(address,address)" \
-  $USDC_TOKEN_ADDRESS \
+  $QUOTE_TOKEN_ADDRESS \
   $HTK_TOKEN_ADDRESS \
   --rpc-url $RPC_URL \
   --private-key $DAO_ADMIN_PRIVATE_KEY
@@ -113,7 +113,7 @@ cast send $PAIR_WHITELIST_ADDRESS "addPair(address,address)" \
 ```bash
 # From DAO admin account, call addPair repeatedly
 cast send $PAIR_WHITELIST_ADDRESS "addPair(address,address)" \
-  $USDC_TOKEN_ADDRESS \
+  $QUOTE_TOKEN_ADDRESS \
   $HTK_TOKEN_ADDRESS \
   --rpc-url $RPC_URL \
   --private-key $DAO_ADMIN_PRIVATE_KEY
@@ -129,7 +129,7 @@ cast send $PAIR_WHITELIST_ADDRESS "addPair(address,address)" \
 
 ```bash
 cast call $PAIR_WHITELIST_ADDRESS "isPairWhitelisted(address,address)(bool)" \
-  $USDC_TOKEN_ADDRESS \
+  $QUOTE_TOKEN_ADDRESS \
   $HTK_TOKEN_ADDRESS \
   --rpc-url $RPC_URL
 ```
@@ -143,7 +143,7 @@ Only authorized traders can submit trades:
 ```bash
 # From trader account (HuffyPuppet)
 cast send $RELAY_ADDRESS "proposeSwap(address,address,bytes,uint256,uint256,uint256)" \
-  $USDC_TOKEN_ADDRESS \
+  $QUOTE_TOKEN_ADDRESS \
   $USDT_TOKEN_ADDRESS \
   $USDC_TO_USDT_PATH \
   100000000 \
@@ -166,7 +166,7 @@ Parameters:
 ```bash
 # From trader account
 cast send $RELAY_ADDRESS "proposeBuybackAndBurn(address,bytes,uint256,uint256,uint256)" \
-  $USDC_TOKEN_ADDRESS \
+  $QUOTE_TOKEN_ADDRESS \
   $USDC_TO_HTK_PATH \
   100000000 \
   190000000000000000000 \

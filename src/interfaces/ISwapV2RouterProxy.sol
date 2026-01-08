@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface ISwapRouterProxyHedera {
+interface ISwapV2RouterProxy {
     function swapExactHBARForTokens(bytes calldata path, address recipient, uint256 deadline, uint256 amountOutMinimum)
         external
         payable
