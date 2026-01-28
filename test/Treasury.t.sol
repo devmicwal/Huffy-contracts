@@ -330,7 +330,14 @@ contract TreasuryTest is Test {
         bytes memory path = _encodePath(address(htkToken), address(htkToken));
         vm.expectRevert(bytes("Treasury: Cannot swap HTK for HTK"));
         mockRelay.executeBuybackAndBurn(
-            address(htkToken), path, _encodePath(address(usdcToken), address(htkToken)), buybackAmount, 0, 0, type(uint256).max, deadline
+            address(htkToken),
+            path,
+            _encodePath(address(usdcToken), address(htkToken)),
+            buybackAmount,
+            0,
+            0,
+            type(uint256).max,
+            deadline
         );
     }
 
@@ -339,7 +346,14 @@ contract TreasuryTest is Test {
         uint256 deadline = block.timestamp + 3600;
         vm.expectRevert(bytes("Treasury: Path required"));
         mockRelay.executeBuybackAndBurn(
-            address(usdtToken), bytes(""), _encodePath(address(usdcToken), address(htkToken)), buybackAmount, 0, 1, type(uint256).max, deadline
+            address(usdtToken),
+            bytes(""),
+            _encodePath(address(usdcToken), address(htkToken)),
+            buybackAmount,
+            0,
+            1,
+            type(uint256).max,
+            deadline
         );
     }
 
@@ -349,7 +363,14 @@ contract TreasuryTest is Test {
 
         vm.expectRevert(bytes("Treasury: Expired deadline"));
         mockRelay.executeBuybackAndBurn(
-            address(usdcToken), bytes(""), _encodePath(address(usdcToken), address(htkToken)), buybackAmount, 0, 1, type(uint256).max, deadline
+            address(usdcToken),
+            bytes(""),
+            _encodePath(address(usdcToken), address(htkToken)),
+            buybackAmount,
+            0,
+            1,
+            type(uint256).max,
+            deadline
         );
     }
 
@@ -359,7 +380,14 @@ contract TreasuryTest is Test {
 
         vm.expectRevert(bytes("Treasury: Insufficient balance"));
         mockRelay.executeBuybackAndBurn(
-            address(usdcToken), bytes(""), _encodePath(address(usdcToken), address(htkToken)), buybackAmount, 0, 1, type(uint256).max, deadline
+            address(usdcToken),
+            bytes(""),
+            _encodePath(address(usdcToken), address(htkToken)),
+            buybackAmount,
+            0,
+            1,
+            type(uint256).max,
+            deadline
         );
     }
 

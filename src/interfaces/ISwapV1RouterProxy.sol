@@ -18,12 +18,10 @@ interface ISwapV1RouterProxy {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactHBARForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
+    function swapExactHBARForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts);
 
     function swapTokensForExactHBAR(
         uint256 amountOut,
@@ -33,12 +31,10 @@ interface ISwapV1RouterProxy {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapHBARForExactTokens(
-        uint256 amountOut,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
+    function swapHBARForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts);
 
     function swapExactTokensForHBAR(
         uint256 amountIn,

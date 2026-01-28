@@ -39,9 +39,8 @@ contract DeployRelay is Script {
 
         vm.startBroadcast();
 
-        Relay relay = new Relay(
-            pairWhitelist, treasury, parameterStoreAddr, daoAdmin, timelock, whbarToken, initialTraders
-        );
+        Relay relay =
+            new Relay(pairWhitelist, treasury, parameterStoreAddr, daoAdmin, timelock, whbarToken, initialTraders);
 
         vm.stopBroadcast();
 

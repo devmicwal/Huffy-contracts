@@ -55,16 +55,15 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
                 amountOutReceived = amounts[amounts.length - 1];
                 _sweepHBAR(req.recipient);
             } else if (req.kind == SwapKind.HBARForExactTokens) {
-                amounts = v1Router.swapHBARForExactTokens{value: msg.value}(
-                    req.amountOut, path, req.recipient, req.deadline
-                );
+                amounts =
+                    v1Router.swapHBARForExactTokens{value: msg.value}(req.amountOut, path, req.recipient, req.deadline);
                 amountInUsed = amounts[0];
                 amountOutReceived = amounts[amounts.length - 1];
                 if (msg.value > amountInUsed) {
-                     (bool success, ) = payable(msg.sender).call{value: msg.value - amountInUsed}("");
-                     require(success, "Refund failed");
+                    (bool success,) = payable(msg.sender).call{value: msg.value - amountInUsed}("");
+                    require(success, "Refund failed");
                 }
-                 _sweepHBAR(req.recipient);
+                _sweepHBAR(req.recipient);
             } else if (req.kind == SwapKind.ExactTokensForTokens) {
                 IERC20(req.tokenIn).safeTransferFrom(msg.sender, address(this), req.amountIn);
                 _ensureInfiniteApproval(IERC20(req.tokenIn), address(v1Router), req.amountIn);
