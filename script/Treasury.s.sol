@@ -9,7 +9,6 @@ contract DeployTreasury is Script {
     function run() external {
         address htkToken = vm.envAddress("HTK_TOKEN_ADDRESS");
         address quoteToken = vm.envAddress("QUOTE_TOKEN_ADDRESS");
-        uint24 quoteToHtkFee = uint24(vm.envUint("QUOTE_TO_HTK_FEE"));
         address swapAdapter = vm.envOr("SWAP_ADAPTER_ADDRESS", address(0));
         address daoAdmin = vm.envOr("DAO_ADMIN_ADDRESS", msg.sender);
         address relay = vm.envOr("RELAY_ADDRESS", msg.sender);
@@ -17,7 +16,6 @@ contract DeployTreasury is Script {
 
         require(htkToken != address(0), "HTK_TOKEN_ADDRESS not set");
         require(quoteToken != address(0), "QUOTE_TOKEN_ADDRESS not set");
-        require(quoteToHtkFee > 0, "QUOTE_TO_HTK_FEE not set");
         require(swapAdapter != address(0), "SWAP_ADAPTER_ADDRESS not set");
         require(daoAdmin != address(0), "DAO_ADMIN_ADDRESS not set");
         require(relay != address(0), "RELAY_ADDRESS not set");
@@ -28,7 +26,6 @@ contract DeployTreasury is Script {
         console.log("Deployer:", msg.sender);
         console.log("HTK Token:", htkToken);
         console.log("Quote Token:", quoteToken);
-        console.log("Quote -> HTK fee:", quoteToHtkFee);
         console.log("Swap Adapter:", swapAdapter);
         console.log("DAO Admin:", daoAdmin);
         console.log("Relay:", relay);
@@ -38,7 +35,7 @@ contract DeployTreasury is Script {
         vm.startBroadcast();
 
         Treasury treasury =
-            new Treasury(htkToken, quoteToken, quoteToHtkFee, swapAdapter, daoAdmin, relay, burnSink, whbar);
+            new Treasury(htkToken, quoteToken, swapAdapter, daoAdmin, relay, burnSink, whbar);
 
         vm.stopBroadcast();
 

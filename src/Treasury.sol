@@ -23,7 +23,6 @@ contract Treasury is AccessControl, ReentrancyGuard {
     // Immutable config
     address public immutable HTK_TOKEN;
     address public immutable QUOTE_TOKEN; // e.g. USDC used for buybacks
-    uint24 public immutable quoteToHtkFee;
     ISwapAdapter public adapter;
     address public whbarToken;
     address public burnSink;
@@ -60,7 +59,6 @@ contract Treasury is AccessControl, ReentrancyGuard {
     constructor(
         address _htkToken,
         address _quoteToken,
-        uint24 _quoteToHtkFee,
         address _adapter,
         address _admin,
         address _relay,
@@ -70,7 +68,6 @@ contract Treasury is AccessControl, ReentrancyGuard {
         require(_htkToken != address(0), "Treasury: Invalid HTK token");
         require(_quoteToken != address(0), "Treasury: Invalid quote token");
         require(_quoteToken != _htkToken, "Treasury: quote token equals HTK");
-        require(_quoteToHtkFee > 0, "Treasury: Invalid pool fee");
         require(_adapter != address(0), "Treasury: Invalid adapter");
         require(_admin != address(0), "Treasury: Invalid admin");
         require(_relay != address(0), "Treasury: Invalid relay");
@@ -79,7 +76,6 @@ contract Treasury is AccessControl, ReentrancyGuard {
 
         HTK_TOKEN = _htkToken;
         QUOTE_TOKEN = _quoteToken;
-        quoteToHtkFee = _quoteToHtkFee;
         adapter = ISwapAdapter(_adapter);
         burnSink = _burnSink;
         whbarToken = _whbarToken;
