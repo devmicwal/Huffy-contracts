@@ -50,7 +50,6 @@ contract RelayTest is Test {
     uint256 constant MAX_TRADE_BPS = 1000; // 10%
     uint256 constant MAX_SLIPPAGE_BPS = 500; // 5%
     uint256 constant TRADE_COOLDOWN_SEC = 60; // 1 minute
-    uint24 constant QUOTE_FEE = 3000;
 
     // Events
     event TradeProposed(
@@ -168,7 +167,6 @@ contract RelayTest is Test {
         treasury = new Treasury(
             address(htkToken),
             address(usdcToken),
-            QUOTE_FEE,
             address(swapAdapter),
             dao,
             address(this),

@@ -21,7 +21,6 @@ contract TreasuryTest is Test {
     MockSaucerswapRouter public saucerswapRouter;
     MockSwapAdapter public swapAdapter;
     address public whbarToken;
-    uint24 public constant QUOTE_FEE = 3000;
 
     address public owner;
     address public dao;
@@ -87,7 +86,6 @@ contract TreasuryTest is Test {
         treasury = new Treasury(
             address(htkToken),
             address(usdcToken),
-            QUOTE_FEE,
             address(swapAdapter),
             dao,
             owner,
@@ -119,7 +117,6 @@ contract TreasuryTest is Test {
         assertEq(treasury.HTK_TOKEN(), address(htkToken));
         assertEq(address(treasury.adapter()), address(swapAdapter));
         assertEq(treasury.QUOTE_TOKEN(), address(usdcToken));
-        assertEq(treasury.quoteToHtkFee(), QUOTE_FEE);
 
         bytes32 daoRole = treasury.DAO_ROLE();
         assertTrue(treasury.hasRole(daoRole, dao));
@@ -131,14 +128,14 @@ contract TreasuryTest is Test {
     function test_RevertWhen_DeployWithZeroHTKToken() public {
         vm.expectRevert(bytes("Treasury: Invalid HTK token"));
         new Treasury(
-            address(0), address(usdcToken), QUOTE_FEE, address(swapAdapter), dao, owner, address(0xdead), whbarToken
+            address(0), address(usdcToken), address(swapAdapter), dao, owner, address(0xdead), whbarToken
         );
     }
 
     function test_RevertWhen_DeployWithZeroAdapter() public {
         vm.expectRevert(bytes("Treasury: Invalid adapter"));
         new Treasury(
-            address(htkToken), address(usdcToken), QUOTE_FEE, address(0), dao, owner, address(0xdead), whbarToken
+            address(htkToken), address(usdcToken), address(0), dao, owner, address(0xdead), whbarToken
         );
     }
 
@@ -147,7 +144,6 @@ contract TreasuryTest is Test {
         new Treasury(
             address(htkToken),
             address(usdcToken),
-            QUOTE_FEE,
             address(swapAdapter),
             address(0),
             owner,
@@ -161,7 +157,6 @@ contract TreasuryTest is Test {
         new Treasury(
             address(htkToken),
             address(usdcToken),
-            QUOTE_FEE,
             address(swapAdapter),
             dao,
             address(0),
