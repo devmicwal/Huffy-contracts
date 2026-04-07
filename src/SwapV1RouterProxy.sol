@@ -22,12 +22,10 @@ interface ISwapRouter {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapExactETHForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
+    function swapExactETHForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts);
 
     function swapTokensForExactETH(
         uint256 amountOut,
@@ -37,12 +35,10 @@ interface ISwapRouter {
         uint256 deadline
     ) external returns (uint256[] memory amounts);
 
-    function swapETHForExactTokens(
-        uint256 amountOut,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts);
+    function swapETHForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts);
 
     function swapExactTokensForETH(
         uint256 amountIn,
@@ -156,12 +152,11 @@ contract SwapV1RouterProxy is Ownable {
         emit SwapTokensForExactTokens(msg.sender, path[0], path, to, amountOut, amounts[0]);
     }
 
-    function swapExactHBARForTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts) {
+    function swapExactHBARForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts)
+    {
         if (path[0] != address(WHBAR)) revert PathMismatch();
         amounts = ISwapRouter(router).swapExactETHForTokens{value: msg.value}(amountOutMin, path, to, deadline);
 
@@ -209,18 +204,17 @@ contract SwapV1RouterProxy is Ownable {
         emit SwapExactTokensForHBAR(msg.sender, path[0], path, to, amountIn, amounts[amounts.length - 1]);
     }
 
-    function swapHBARForExactTokens(
-        uint256 amountOut,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256[] memory amounts) {
+    function swapHBARForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts)
+    {
         if (path[0] != address(WHBAR)) revert PathMismatch();
         amounts = ISwapRouter(router).swapETHForExactTokens{value: msg.value}(amountOut, path, to, deadline);
 
         uint256 amountInUsed = amounts[0];
         if (msg.value > amountInUsed) {
-            (bool success, ) = payable(msg.sender).call{value: msg.value - amountInUsed}("");
+            (bool success,) = payable(msg.sender).call{value: msg.value - amountInUsed}("");
             if (!success) revert RefundFailed();
         }
 

@@ -162,8 +162,7 @@ contract Treasury is AccessControl, ReentrancyGuard {
             (address start, address end) = _extractPathEndpoints(pathToQuote);
             require(start == tokenToSell, "Treasury: Path start mismatch");
             require(end == quote, "Treasury: Path must end in quote");
-            IERC20(tokenToSell).forceApprove(address(adapter), 0);
-            IERC20(tokenToSell).forceApprove(address(adapter), amountIn);
+            _ensureInfiniteApproval(IERC20(tokenToSell), address(adapter), amountIn);
             ISwapAdapter.SwapRequest memory toQuote = ISwapAdapter.SwapRequest({
                 kind: ISwapAdapter.SwapKind.ExactTokensForTokens,
                 tokenIn: tokenToSell,
@@ -190,8 +189,7 @@ contract Treasury is AccessControl, ReentrancyGuard {
             require(priceD18 <= maxHtkPriceD18, "Treasury: HTK price too high");
         }
         // Swap quote -> HTK using provided path (supports both V1 and V2)
-        IERC20(quote).forceApprove(address(adapter), 0);
-        IERC20(quote).forceApprove(address(adapter), quoteAmount);
+        _ensureInfiniteApproval(IERC20(quote), address(adapter), quoteAmount);
         ISwapAdapter.SwapRequest memory toHtk = ISwapAdapter.SwapRequest({
             kind: ISwapAdapter.SwapKind.ExactTokensForTokens,
             tokenIn: quote,
@@ -324,8 +322,7 @@ contract Treasury is AccessControl, ReentrancyGuard {
 
         // Token balance check + approve
         require(IERC20(tokenIn).balanceOf(address(this)) >= approveAmount, "Treasury: Insufficient balance");
-        IERC20(tokenIn).forceApprove(address(adapter), 0);
-        IERC20(tokenIn).forceApprove(address(adapter), approveAmount);
+        _ensureInfiniteApproval(IERC20(tokenIn), address(adapter), approveAmount);
 
         ISwapAdapter.SwapRequest memory request = ISwapAdapter.SwapRequest({
             kind: kind,
@@ -403,6 +400,12 @@ contract Treasury is AccessControl, ReentrancyGuard {
         IERC20(HTK_TOKEN).safeTransfer(burnSink, amount);
         emit Burned(amount, msg.sender, block.timestamp);
         return amount;
+    }
+
+    function _ensureInfiniteApproval(IERC20 token, address spender, uint256 amount) private {
+        if (token.allowance(address(this), spender) >= amount) return;
+        token.forceApprove(spender, 0);
+        token.forceApprove(spender, type(uint256).max);
     }
 
     function _extractPathEndpoints(bytes memory path) private pure returns (address start, address end) {

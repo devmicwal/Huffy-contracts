@@ -13,8 +13,6 @@ import {Test} from "forge-std/Test.sol";
 import {TreasuryBalanceValidator} from "../src/validators/TreasuryBalanceValidator.sol";
 import {ISwapAdapter} from "../src/interfaces/ISwapAdapter.sol";
 
-
-
 contract MockPairWhitelist {
     mapping(address => mapping(address => bool)) public pair;
 
@@ -61,11 +59,16 @@ contract MockTreasury {
         return 0;
     }
 
-    function executeBuybackAndBurn(address, bytes calldata, bytes calldata, uint256, uint256, uint256, uint256, uint256)
-        external
-        pure
-        returns (uint256)
-    {
+    function executeBuybackAndBurn(
+        address,
+        bytes calldata,
+        bytes calldata,
+        uint256,
+        uint256,
+        uint256,
+        uint256,
+        uint256
+    ) external pure returns (uint256) {
         return 0;
     }
 }
@@ -119,9 +122,7 @@ contract RelayValidateTest is Test {
         address[] memory traders = new address[](1);
         traders[0] = trader;
         address whbar = address(0x3000);
-        relay = new TestRelay(
-            address(pw), payable(address(treasury)), address(params), admin, timelock, whbar, traders
-        );
+        relay = new TestRelay(address(pw), payable(address(treasury)), address(params), admin, timelock, whbar, traders);
 
         // Add validators
         relay.addValidator(address(new PairWhitelistValidator()));

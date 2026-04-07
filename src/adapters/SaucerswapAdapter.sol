@@ -55,32 +55,28 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
                 amountOutReceived = amounts[amounts.length - 1];
                 _sweepHBAR(req.recipient);
             } else if (req.kind == SwapKind.HBARForExactTokens) {
-                amounts = v1Router.swapHBARForExactTokens{value: msg.value}(
-                    req.amountOut, path, req.recipient, req.deadline
-                );
+                amounts =
+                    v1Router.swapHBARForExactTokens{value: msg.value}(req.amountOut, path, req.recipient, req.deadline);
                 amountInUsed = amounts[0];
                 amountOutReceived = amounts[amounts.length - 1];
                 if (msg.value > amountInUsed) {
-                     (bool success, ) = payable(msg.sender).call{value: msg.value - amountInUsed}("");
-                     require(success, "Refund failed");
+                    (bool success,) = payable(msg.sender).call{value: msg.value - amountInUsed}("");
+                    require(success, "Refund failed");
                 }
-                 _sweepHBAR(req.recipient);
+                _sweepHBAR(req.recipient);
             } else if (req.kind == SwapKind.ExactTokensForTokens) {
                 IERC20(req.tokenIn).safeTransferFrom(msg.sender, address(this), req.amountIn);
-                IERC20(req.tokenIn).forceApprove(address(v1Router), req.amountIn);
+                _ensureInfiniteApproval(IERC20(req.tokenIn), address(v1Router), req.amountIn);
 
                 amounts = v1Router.swapExactTokensForTokens(
                     req.amountIn, req.amountOutMinimum, path, req.recipient, req.deadline
                 );
 
-                IERC20(req.tokenIn).forceApprove(address(v1Router), 0);
-
                 amountInUsed = amounts[0];
                 amountOutReceived = amounts[amounts.length - 1];
             } else if (req.kind == SwapKind.TokensForExactTokens) {
                 IERC20(req.tokenIn).safeTransferFrom(msg.sender, address(this), req.amountInMaximum);
-                IERC20(req.tokenIn).forceApprove(address(v1Router), req.amountInMaximum);
-
+                _ensureInfiniteApproval(IERC20(req.tokenIn), address(v1Router), req.amountInMaximum);
                 amounts = v1Router.swapTokensForExactTokens(
                     req.amountOut, req.amountInMaximum, path, req.recipient, req.deadline
                 );
@@ -91,22 +87,19 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
                 if (req.amountInMaximum > amountInUsed) {
                     IERC20(req.tokenIn).safeTransfer(msg.sender, req.amountInMaximum - amountInUsed);
                 }
-                IERC20(req.tokenIn).forceApprove(address(v1Router), 0);
             } else if (req.kind == SwapKind.ExactTokensForHBAR) {
                 IERC20(req.tokenIn).safeTransferFrom(msg.sender, address(this), req.amountIn);
-                IERC20(req.tokenIn).forceApprove(address(v1Router), req.amountIn);
+                _ensureInfiniteApproval(IERC20(req.tokenIn), address(v1Router), req.amountIn);
 
                 amounts = v1Router.swapExactTokensForHBAR(
                     req.amountIn, req.amountOutMinimum, path, req.recipient, req.deadline
                 );
 
-                IERC20(req.tokenIn).forceApprove(address(v1Router), 0);
-
                 amountInUsed = amounts[0];
                 amountOutReceived = amounts[amounts.length - 1];
             } else if (req.kind == SwapKind.TokensForExactHBAR) {
                 IERC20(req.tokenIn).safeTransferFrom(msg.sender, address(this), req.amountInMaximum);
-                IERC20(req.tokenIn).forceApprove(address(v1Router), req.amountInMaximum);
+                _ensureInfiniteApproval(IERC20(req.tokenIn), address(v1Router), req.amountInMaximum);
 
                 amounts = v1Router.swapTokensForExactHBAR(
                     req.amountOut, req.amountInMaximum, path, req.recipient, req.deadline
@@ -118,7 +111,6 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
                 if (req.amountInMaximum > amountInUsed) {
                     IERC20(req.tokenIn).safeTransfer(msg.sender, req.amountInMaximum - amountInUsed);
                 }
-                IERC20(req.tokenIn).forceApprove(address(v1Router), 0);
             } else {
                 revert UnsupportedKind();
             }
@@ -141,22 +133,18 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
             } else if (req.kind == SwapKind.ExactTokensForTokens) {
                 IERC20 t = IERC20(req.tokenIn);
                 t.safeTransferFrom(msg.sender, address(this), req.amountIn);
-                t.forceApprove(address(v2Router), 0);
-                t.forceApprove(address(v2Router), req.amountIn);
+                _ensureInfiniteApproval(t, address(v2Router), req.amountIn);
 
                 uint256 outAmt2 = v2Router.swapExactTokensForTokens(
                     req.tokenIn, req.amountIn, req.path, req.recipient, req.deadline, req.amountOutMinimum
                 );
-
-                t.forceApprove(address(v2Router), 0);
 
                 amountInUsed = req.amountIn;
                 amountOutReceived = outAmt2;
             } else if (req.kind == SwapKind.TokensForExactTokens) {
                 IERC20 t2 = IERC20(req.tokenIn);
                 t2.safeTransferFrom(msg.sender, address(this), req.amountInMaximum);
-                t2.forceApprove(address(v2Router), 0);
-                t2.forceApprove(address(v2Router), req.amountInMaximum);
+                _ensureInfiniteApproval(t2, address(v2Router), req.amountInMaximum);
 
                 uint256 inAmt2 = v2Router.swapTokensForExactTokens(
                     req.tokenIn, req.amountInMaximum, req.path, req.recipient, req.deadline, req.amountOut
@@ -165,29 +153,24 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
                 if (req.amountInMaximum > inAmt2) {
                     t2.safeTransfer(msg.sender, req.amountInMaximum - inAmt2);
                 }
-                t2.forceApprove(address(v2Router), 0);
 
                 amountInUsed = inAmt2;
                 amountOutReceived = req.amountOut;
             } else if (req.kind == SwapKind.ExactTokensForHBAR) {
                 IERC20 t3 = IERC20(req.tokenIn);
                 t3.safeTransferFrom(msg.sender, address(this), req.amountIn);
-                t3.forceApprove(address(v2Router), 0);
-                t3.forceApprove(address(v2Router), req.amountIn);
+                _ensureInfiniteApproval(t3, address(v2Router), req.amountIn);
 
                 uint256 outHBAR = v2Router.swapExactTokensForHBAR(
                     req.tokenIn, req.amountIn, req.path, req.recipient, req.deadline, req.amountOutMinimum
                 );
-
-                t3.forceApprove(address(v2Router), 0);
 
                 amountInUsed = req.amountIn;
                 amountOutReceived = outHBAR;
             } else if (req.kind == SwapKind.TokensForExactHBAR) {
                 IERC20 t4 = IERC20(req.tokenIn);
                 t4.safeTransferFrom(msg.sender, address(this), req.amountInMaximum);
-                t4.forceApprove(address(v2Router), 0);
-                t4.forceApprove(address(v2Router), req.amountInMaximum);
+                _ensureInfiniteApproval(t4, address(v2Router), req.amountInMaximum);
 
                 uint256 inAmt3 = v2Router.swapTokensForExactHBAR(
                     req.tokenIn, req.amountInMaximum, req.path, req.recipient, req.deadline, req.amountOut
@@ -196,7 +179,6 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
                 if (req.amountInMaximum > inAmt3) {
                     t4.safeTransfer(msg.sender, req.amountInMaximum - inAmt3);
                 }
-                t4.forceApprove(address(v2Router), 0);
 
                 amountInUsed = inAmt3;
                 amountOutReceived = req.amountOut;
@@ -213,6 +195,12 @@ contract SaucerswapAdapter is ISwapAdapter, Ownable {
         if (bal == 0 || recipient == address(0)) return;
         (bool ok,) = payable(recipient).call{value: bal}("");
         require(ok, "Adapter: sweep HBAR failed");
+    }
+
+    function _ensureInfiniteApproval(IERC20 token, address spender, uint256 amount) private {
+        if (token.allowance(address(this), spender) >= amount) return;
+        token.forceApprove(spender, 0);
+        token.forceApprove(spender, type(uint256).max);
     }
 
     // --------------------
